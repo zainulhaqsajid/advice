@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { href: '/', label: 'Home' },
   { href: '/intake', label: 'Get Started' },
-  { href: '/dashboard', label: 'Dashboard' },
   { href: '/partner-visa', label: 'Partner Visa' },
   { href: '/parent-visa', label: 'Parent Visa' },
   { href: '/student-visa', label: 'Student Visa' },
@@ -25,6 +25,7 @@ const navItems = [
 export default function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <nav className="bg-blue-900 text-white shadow-lg">
@@ -35,7 +36,7 @@ export default function Navigation() {
           </Link>
 
           {/* Desktop navigation - scrollable */}
-          <div className="hidden lg:flex items-center space-x-1 overflow-x-auto max-w-5xl">
+          <div className="hidden lg:flex items-center space-x-1 overflow-x-auto max-w-4xl">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -49,6 +50,35 @@ export default function Navigation() {
                 {item.label}
               </Link>
             ))}
+          </div>
+
+          {/* Auth Button - Desktop */}
+          <div className="hidden lg:flex items-center ml-2">
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  pathname === '/dashboard'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-blue-700 text-white hover:bg-green-600'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {user?.name?.split(' ')[0] || 'Dashboard'}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Sign In
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -69,6 +99,32 @@ export default function Navigation() {
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="lg:hidden pb-4">
+            {/* Auth Button - Mobile */}
+            <div className="mb-3 pb-3 border-b border-blue-800">
+              {isAuthenticated ? (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Dashboard ({user?.name?.split(' ')[0]})
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Sign In
+                </Link>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-1">
               {navItems.map((item) => (
                 <Link

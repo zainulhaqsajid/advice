@@ -130,6 +130,36 @@ const complexScenarios = [
     content:
       'Condition 8503 ("No Further Stay") prevents the holder from applying for most substantive visas while in Australia. This is a significant barrier for onshore partner visa applications. If your current visa has Condition 8503, you generally cannot lodge an onshore partner visa (SC 820) unless a waiver is granted. Waivers are only granted in limited circumstances, such as: compelling and compassionate circumstances, or where it would be unreasonable for you to leave Australia to apply offshore. If a waiver is not granted, you must depart Australia and apply for an offshore partner visa (SC 309) instead.',
   },
+  {
+    id: 'sc485-partner-eligible',
+    title: 'SC 485 Holder - Applying for Partner Visa',
+    content:
+      'If you hold a Subclass 485 (Temporary Graduate) visa and are in a genuine relationship with an Australian citizen, permanent resident, or eligible NZ citizen, you can apply for an onshore partner visa (SC 820) while in Australia. The SC 485 does not have Condition 8503, so there is no "No Further Stay" restriction. Once you lodge the SC 820, you will receive a Bridging Visa A (BVA) that activates when your SC 485 expires. This BVA allows you to remain in Australia with work rights while your partner visa is being processed. Timing tip: You do not need to wait until your SC 485 expires — lodge the SC 820 whenever your relationship meets the criteria.',
+  },
+  {
+    id: 'sc485-expired-partner',
+    title: 'SC 485 Expired - Can I Still Apply for Partner Visa?',
+    content:
+      'If your SC 485 has already expired and you are on a Bridging Visa (for example, BVA from a prior application, or BVE), you may still be eligible to lodge a partner visa onshore, depending on the conditions of your bridging visa. If you are unlawful (no valid visa), you cannot lodge an onshore partner visa. In this case, you would need to either: (1) depart Australia and apply for an offshore partner visa (SC 309), or (2) in exceptional circumstances, apply for a Bridging Visa E to depart voluntarily. It is critical to not overstay — seek advice from a MARA-registered migration agent immediately if your SC 485 is about to expire.',
+  },
+  {
+    id: 'sc485-partner-work-rights',
+    title: 'SC 485 to Partner Visa - Work Rights During Processing',
+    content:
+      'While on a SC 485 visa, you have full work rights (no hours restriction). When you lodge a partner visa (SC 820) application, you are granted a Bridging Visa A (BVA). The BVA does not activate until your SC 485 expires. Once the BVA activates, it typically includes full work rights (Condition 8501 — must maintain health insurance). There is generally no gap in work rights during the transition from SC 485 to BVA. Ensure you maintain valid health insurance cover throughout, as this is a condition on both visa types.',
+  },
+  {
+    id: 'sc485-de-facto-12-months',
+    title: 'SC 485 - De Facto Relationship Under 12 Months',
+    content:
+      'If you are on a SC 485 and in a de facto relationship that has not yet reached the 12-month threshold, you generally cannot lodge a partner visa yet. However, there are exemptions: (1) if you have a child together, (2) if the relationship is registered with an Australian state or territory registry, or (3) if there are compelling and compassionate circumstances. Many SC 485 holders start their de facto relationship after arriving in Australia. In this case, consider registering your relationship with the state government (available in NSW, VIC, QLD, TAS, SA, ACT) as an alternative to waiting 12 months.',
+  },
+  {
+    id: 'sc485-skilled-vs-partner',
+    title: 'SC 485 Holder - Skilled Visa vs Partner Visa Strategy',
+    content:
+      'If you hold a SC 485 and have both a genuine partner relationship and a skilled migration pathway available, you may want to consider your options carefully. The partner visa (SC 820) costs AUD $9,095 with processing times of 21-34 months for the temporary stage. The skilled visa (SC 189/190) costs AUD $4,640 but requires a positive skills assessment, sufficient points (65+), and an EOI invitation. Some applicants choose to pursue both simultaneously: lodge the SC 820 for security while also submitting an EOI for a skilled visa. If the skilled visa is granted first, you can withdraw the partner visa application (note: fees are not refundable). Consult a migration agent to determine the best strategy for your specific circumstances.',
+  },
 ];
 
 export default function PartnerVisaPage() {

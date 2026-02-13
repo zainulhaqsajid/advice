@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 const VISA_PATHWAYS = [
   { value: 'sc189', label: 'Skilled Independent (SC 189)' },
@@ -893,8 +894,10 @@ const PATHWAY_DOCUMENTS: Record<string, ChecklistSection[]> = {
 };
 
 export default function DocumentChecklistPage() {
+  const { isAuthenticated, saveReport } = useAuth();
   const [selectedPathway, setSelectedPathway] = useState<string>('');
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [saved, setSaved] = useState(false);
 
   const handleToggleItem = (sectionPrefix: string, itemId: string) => {
     const key = `${sectionPrefix}-${itemId}`;
@@ -1148,6 +1151,57 @@ export default function DocumentChecklistPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Save Report Button */}
+      {selectedPathway && isAuthenticated && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              const items: { name: string; checked: boolean }[] = [];
+              UNIVERSAL_DOCUMENTS.forEach((item) => {
+                items.push({ name: item.name, checked: checkedItems.has(`universal-${item.id}`) });
+              });
+              if (PATHWAY_DOCUMENTS[selectedPathway]) {
+                PATHWAY_DOCUMENTS[selectedPathway].forEach((section) => {
+                  section.items.forEach((item) => {
+                    items.push({ name: `[${section.title}] ${item.name}`, checked: checkedItems.has(`${section.title}-${item.id}`) });
+                  });
+                });
+              }
+              saveReport({
+                type: 'checklist',
+                title: `Document Checklist - ${VISA_PATHWAYS.find(p => p.value === selectedPathway)?.label}`,
+                pathway: selectedPathway,
+                data: { items, progress: progressPercent },
+              });
+              setSaved(true);
+              setTimeout(() => setSaved(false), 3000);
+            }}
+            disabled={saved}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+              saved
+                ? 'bg-green-600 text-white'
+                : 'bg-blue-700 text-white hover:bg-blue-800'
+            }`}
+          >
+            {saved ? (
+              <>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Saved to Dashboard
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Save Checklist to Dashboard
+              </>
+            )}
+          </button>
+        </div>
       )}
 
       {/* Disclaimer */}

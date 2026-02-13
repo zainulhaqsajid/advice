@@ -311,7 +311,7 @@ function generateRecommendation(form: IntakeFormData): Recommendation | null {
   const warnings: string[] = [];
 
   // Sponsor checks
-  if (sponsorStatus === '') {
+  if (!sponsorStatus) {
     warnings.push('Sponsor must be an Australian citizen, permanent resident, or eligible NZ citizen.');
   }
   if (sponsorResident2Years === 'no') {
