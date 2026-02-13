@@ -934,6 +934,24 @@ export default function DocumentChecklistPage() {
   ).length;
   const progressPercent = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
 
+  // Build a global index map for sequential numbering across all sections
+  const globalIndexMap = new Map<string, number>();
+  let runningIndex = 0;
+  if (selectedPathway) {
+    UNIVERSAL_DOCUMENTS.forEach((item) => {
+      runningIndex++;
+      globalIndexMap.set(`universal-${item.id}`, runningIndex);
+    });
+    if (PATHWAY_DOCUMENTS[selectedPathway]) {
+      PATHWAY_DOCUMENTS[selectedPathway].forEach((section) => {
+        section.items.forEach((item) => {
+          runningIndex++;
+          globalIndexMap.set(`${section.title}-${item.id}`, runningIndex);
+        });
+      });
+    }
+  }
+
   const handlePathwayChange = (value: string) => {
     setSelectedPathway(value);
     setCheckedItems(new Set());
@@ -994,9 +1012,19 @@ export default function DocumentChecklistPage() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              {checkedCount} of {totalItems} documents ready ({progressPercent}%)
-            </p>
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-sm text-gray-500">
+                {checkedCount} of {totalItems} documents ready ({progressPercent}%)
+              </p>
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="text-sm font-semibold text-blue-800">
+                  Total Documents: {totalItems}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Universal Documents */}
@@ -1011,6 +1039,7 @@ export default function DocumentChecklistPage() {
               {UNIVERSAL_DOCUMENTS.map((item) => {
                 const key = `universal-${item.id}`;
                 const isChecked = checkedItems.has(key);
+                const itemNumber = globalIndexMap.get(key) || 0;
                 return (
                   <label
                     key={item.id}
@@ -1020,7 +1049,14 @@ export default function DocumentChecklistPage() {
                         : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-gray-100'
                     }`}
                   >
-                    <div className="flex-shrink-0 pt-0.5">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                      isChecked
+                        ? 'bg-green-500 text-white'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {itemNumber}
+                    </div>
+                    <div className="flex-shrink-0 pt-1">
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -1090,6 +1126,7 @@ export default function DocumentChecklistPage() {
                     {section.items.map((item) => {
                       const key = `${section.title}-${item.id}`;
                       const isChecked = checkedItems.has(key);
+                      const itemNumber = globalIndexMap.get(key) || 0;
                       return (
                         <label
                           key={item.id}
@@ -1099,7 +1136,14 @@ export default function DocumentChecklistPage() {
                               : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-gray-100'
                           }`}
                         >
-                          <div className="flex-shrink-0 pt-0.5">
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isChecked
+                              ? 'bg-green-500 text-white'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {itemNumber}
+                          </div>
+                          <div className="flex-shrink-0 pt-1">
                             <input
                               type="checkbox"
                               checked={isChecked}
