@@ -38,10 +38,10 @@ const pointsCategories = [
     label: 'Age',
     options: [
       { value: 0, label: 'Under 18 or 45+' },
-      { value: 25, label: '25-32 years' },
-      { value: 30, label: '18-24 years' },
-      { value: 15, label: '33-39 years' },
-      { value: 0, label: '40-44 years' },
+      { value: 30, label: '25-32 years' },
+      { value: 25, label: '18-24 years' },
+      { value: 25, label: '33-39 years' },
+      { value: 15, label: '40-44 years' },
     ],
   },
   {
