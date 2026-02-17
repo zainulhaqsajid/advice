@@ -321,7 +321,7 @@ export default function DashboardPage() {
     setMessagesLoading(true);
     try {
       const { data } = await supabase
-        .from('client_messages')
+        .from('messages')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -427,7 +427,7 @@ export default function DashboardPage() {
           storage_path: storagePath,
           category: uploadCategory,
           description: uploadDescription || null,
-          uploaded_by: user.id,
+          uploaded_by: 'client',
           status: 'uploaded',
         });
 
@@ -524,7 +524,7 @@ export default function DashboardPage() {
     if (!user || !composeContent.trim()) return;
     setSendingMessage(true);
     try {
-      const { error } = await supabase.from('client_messages').insert({
+      const { error } = await supabase.from('messages').insert({
         case_id: composeCaseId || null,
         user_id: user.id,
         sender_type: 'client',
@@ -552,7 +552,7 @@ export default function DashboardPage() {
 
   const handleMarkAsRead = async (msg: MessageType) => {
     if (msg.is_read) return;
-    await supabase.from('client_messages').update({ is_read: true }).eq('id', msg.id);
+    await supabase.from('messages').update({ is_read: true }).eq('id', msg.id);
     setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m));
   };
 
