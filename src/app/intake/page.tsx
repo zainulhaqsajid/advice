@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
@@ -460,6 +460,12 @@ function getRecommendation(
 
 export default function IntakePage() {
   const { user, isAuthenticated, saveReport } = useAuth();
+
+  /* -- Today's date (avoid hydration mismatch) ----------------------------- */
+  const [todayStr, setTodayStr] = useState('');
+  useEffect(() => {
+    setTodayStr(new Date().toISOString().split('T')[0]);
+  }, []);
 
   /* -- Wizard state -------------------------------------------------------- */
   const [step, setStep] = useState<Step>('situation');
@@ -1821,7 +1827,7 @@ export default function IntakePage() {
                         <input
                           type="date"
                           required
-                          min={new Date().toISOString().split('T')[0]}
+                          min={todayStr}
                           value={bookingForm.preferredDate}
                           onChange={(e) =>
                             setBookingForm({ ...bookingForm, preferredDate: e.target.value })
@@ -1927,7 +1933,7 @@ export default function IntakePage() {
               Visa Pathway Assessment Report
             </h1>
             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>
-              Generated on {new Date().toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}
+              Generated on {todayStr ? new Date(todayStr).toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}
               {contactData.full_name ? ` for ${contactData.full_name}` : ''}
             </p>
 
