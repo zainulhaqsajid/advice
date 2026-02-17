@@ -367,6 +367,145 @@ export interface Database {
           last_updated?: string;
         };
       };
+      client_cases: {
+        Row: {
+          id: string;
+          user_id: string;
+          case_number: string;
+          visa_subclass: string;
+          visa_name: string;
+          status: string;
+          priority: string;
+          assigned_agent: string | null;
+          agent_email: string | null;
+          lodgement_date: string | null;
+          decision_date: string | null;
+          notes: string | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          case_number?: string;
+          visa_subclass: string;
+          visa_name: string;
+          status?: string;
+          priority?: string;
+          assigned_agent?: string | null;
+          agent_email?: string | null;
+          lodgement_date?: string | null;
+          decision_date?: string | null;
+          notes?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          priority?: string;
+          assigned_agent?: string | null;
+          agent_email?: string | null;
+          lodgement_date?: string | null;
+          decision_date?: string | null;
+          notes?: string | null;
+          metadata?: Json;
+          updated_at?: string;
+        };
+      };
+      client_documents: {
+        Row: {
+          id: string;
+          user_id: string;
+          case_id: string | null;
+          file_name: string;
+          file_type: string;
+          file_size: number;
+          storage_path: string;
+          category: string;
+          description: string | null;
+          uploaded_by: string;
+          status: string;
+          review_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          case_id?: string | null;
+          file_name: string;
+          file_type: string;
+          file_size: number;
+          storage_path: string;
+          category: string;
+          description?: string | null;
+          uploaded_by?: string;
+          status?: string;
+          review_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          case_id?: string | null;
+          category?: string;
+          description?: string | null;
+          status?: string;
+          review_notes?: string | null;
+          updated_at?: string;
+        };
+      };
+      messages: {
+        Row: {
+          id: string;
+          case_id: string | null;
+          user_id: string;
+          sender_type: string;
+          subject: string | null;
+          content: string;
+          attachments: Json;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          case_id?: string | null;
+          user_id: string;
+          sender_type: string;
+          subject?: string | null;
+          content: string;
+          attachments?: Json;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          is_read?: boolean;
+        };
+      };
+      case_status_history: {
+        Row: {
+          id: string;
+          case_id: string;
+          old_status: string | null;
+          new_status: string;
+          changed_by: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          case_id: string;
+          old_status?: string | null;
+          new_status: string;
+          changed_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          notes?: string | null;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -391,3 +530,7 @@ export type Testimonial = Database['public']['Tables']['testimonials']['Row'];
 export type Occupation = Database['public']['Tables']['occupations']['Row'];
 export type InvitationRound = Database['public']['Tables']['invitation_rounds']['Row'];
 export type StateNomination = Database['public']['Tables']['state_nominations']['Row'];
+export type ClientCase = Database['public']['Tables']['client_cases']['Row'];
+export type ClientDocument = Database['public']['Tables']['client_documents']['Row'];
+export type Message = Database['public']['Tables']['messages']['Row'];
+export type CaseStatusHistory = Database['public']['Tables']['case_status_history']['Row'];
