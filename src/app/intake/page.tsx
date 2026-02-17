@@ -563,15 +563,22 @@ export default function IntakePage() {
     setAssessmentError(null);
 
     try {
+      // Build form_data based on the situation type
+      const formDataMap: Record<string, unknown> = {};
+      if (situation === 'skilled_worker') formDataMap.skilledData = skilledData;
+      if (situation === 'partner_spouse') formDataMap.partnerData = partnerData;
+      if (situation === 'student') formDataMap.studentData = studentData;
+      if (situation === 'parent') formDataMap.parentData = parentData;
+      if (situation === 'visitor') formDataMap.visitorData = visitorData;
+
       const payload = {
         situation,
-        contactData,
-        skilledData: situation === 'skilled_worker' ? skilledData : undefined,
-        partnerData: situation === 'partner_spouse' ? partnerData : undefined,
-        studentData: situation === 'student' ? studentData : undefined,
-        parentData: situation === 'parent' ? parentData : undefined,
-        visitorData: situation === 'visitor' ? visitorData : undefined,
-        recommendation,
+        email: contactData.email || undefined,
+        full_name: contactData.full_name || undefined,
+        phone: contactData.phone || undefined,
+        form_data: formDataMap,
+        recommended_visa: recommendation?.subclasses || undefined,
+        points_score: undefined,
       };
 
       const res = await fetch('/api/assessments', {
@@ -667,8 +674,14 @@ export default function IntakePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...bookingForm,
-          visaCategory: recommendation?.subclasses || bookingForm.visaCategory,
+          full_name: bookingForm.fullName,
+          email: bookingForm.email,
+          phone: bookingForm.phone || undefined,
+          consultation_type: bookingForm.consultationType,
+          preferred_date: bookingForm.preferredDate,
+          preferred_time: bookingForm.preferredTime,
+          visa_category: recommendation?.subclasses || bookingForm.visaCategory || undefined,
+          notes: bookingForm.notes || undefined,
         }),
       });
 
