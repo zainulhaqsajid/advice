@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS public.assessments (
   form_data JSONB DEFAULT '{}',
   recommended_visa TEXT,
   points_score INTEGER,
-  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'converted', 'archived')),
+  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'in_review', 'contacted', 'completed', 'converted', 'archived')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.contact_inquiries (
   inquiry_type TEXT NOT NULL CHECK (inquiry_type IN ('general', 'visa_specific', 'consultation', 'complaint', 'feedback')),
   visa_category TEXT,
   message TEXT NOT NULL,
-  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'responded', 'closed')),
+  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'in_review', 'in_progress', 'contacted', 'responded', 'resolved', 'closed')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

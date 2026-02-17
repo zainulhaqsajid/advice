@@ -104,11 +104,17 @@ const STATUS_COLORS: Record<string, string> = {
   approved: 'bg-green-100 text-green-800',
   resolved: 'bg-gray-100 text-gray-800',
   initial_consultation: 'bg-blue-100 text-blue-800',
-  documents_required: 'bg-yellow-100 text-yellow-800',
-  documents_submitted: 'bg-indigo-100 text-indigo-800',
-  assessment_in_progress: 'bg-purple-100 text-purple-800',
+  documents_collection: 'bg-yellow-100 text-yellow-800',
+  skills_assessment: 'bg-indigo-100 text-indigo-800',
+  application_preparation: 'bg-purple-100 text-purple-800',
   application_lodged: 'bg-cyan-100 text-cyan-800',
-  awaiting_decision: 'bg-orange-100 text-orange-800',
+  additional_info_requested: 'bg-orange-100 text-orange-800',
+  health_checks: 'bg-teal-100 text-teal-800',
+  character_checks: 'bg-slate-100 text-slate-800',
+  decision_pending: 'bg-amber-100 text-amber-800',
+  refused: 'bg-red-100 text-red-800',
+  withdrawn: 'bg-gray-100 text-gray-600',
+  on_hold: 'bg-gray-100 text-gray-700',
   paid: 'bg-green-100 text-green-800',
   unpaid: 'bg-red-100 text-red-800',
 };
@@ -668,7 +674,7 @@ export default function AdminDashboard() {
 
                     <div className="flex flex-wrap items-center gap-2 pt-2">
                       <span className="text-xs text-gray-500 mr-2">Status:</span>
-                      {['initial_consultation', 'documents_required', 'documents_submitted', 'assessment_in_progress', 'application_lodged', 'awaiting_decision', 'approved', 'rejected'].map((s) => (
+                      {['initial_consultation', 'documents_collection', 'skills_assessment', 'application_preparation', 'application_lodged', 'additional_info_requested', 'health_checks', 'character_checks', 'decision_pending', 'approved', 'refused', 'on_hold'].map((s) => (
                         <button
                           key={s}
                           onClick={() => updateStatus('client_cases', row.id, 'status', s)}

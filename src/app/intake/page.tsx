@@ -562,43 +562,45 @@ export default function IntakePage() {
     setAssessmentLoading(true);
     setAssessmentError(null);
 
+    // Build form_data based on the situation type
+    const formDataMap: Record<string, unknown> = {};
+    if (situation === 'skilled_worker') formDataMap.skilledData = skilledData;
+    if (situation === 'partner_spouse') formDataMap.partnerData = partnerData;
+    if (situation === 'student') formDataMap.studentData = studentData;
+    if (situation === 'parent') formDataMap.parentData = parentData;
+    if (situation === 'visitor') formDataMap.visitorData = visitorData;
+
+    const payload = {
+      situation,
+      email: contactData.email || undefined,
+      full_name: contactData.full_name || undefined,
+      phone: contactData.phone || undefined,
+      form_data: formDataMap,
+      recommended_visa: recommendation?.subclasses || undefined,
+      points_score: undefined,
+    };
+
     try {
-      // Build form_data based on the situation type
-      const formDataMap: Record<string, unknown> = {};
-      if (situation === 'skilled_worker') formDataMap.skilledData = skilledData;
-      if (situation === 'partner_spouse') formDataMap.partnerData = partnerData;
-      if (situation === 'student') formDataMap.studentData = studentData;
-      if (situation === 'parent') formDataMap.parentData = parentData;
-      if (situation === 'visitor') formDataMap.visitorData = visitorData;
-
-      const payload = {
-        situation,
-        email: contactData.email || undefined,
-        full_name: contactData.full_name || undefined,
-        phone: contactData.phone || undefined,
-        form_data: formDataMap,
-        recommended_visa: recommendation?.subclasses || undefined,
-        points_score: undefined,
-      };
-
       const res = await fetch('/api/assessments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to submit assessment');
+      if (res.ok) {
+        setAssessmentSubmitted(true);
+      } else {
+        // Log but don't block — user still sees results
+        console.warn('Assessment save failed, but proceeding to results');
       }
-
-      setAssessmentSubmitted(true);
-      setStep('result');
-    } catch (err) {
-      setAssessmentError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setAssessmentLoading(false);
+    } catch {
+      // API save failed — still show results (graceful degradation)
+      console.warn('Assessment API unreachable, proceeding to results');
     }
+
+    // Always proceed to results — the assessment is for the user, DB save is for CRM
+    setStep('result');
+    setAssessmentLoading(false);
   };
 
   const handleSkipContact = () => {
