@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth, User } from '@/context/AuthContext';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 type AuthMethod = 'select' | 'email' | 'phone';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const { login, isAuthenticated } = useAuth();
+  const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading, loginWithEmail, signUpWithEmail, loginWithGoogle, loginWithOTP, verifyOTP } = useAuth();
   const [authMethod, setAuthMethod] = useState<AuthMethod>('select');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,26 +19,26 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  if (isAuthenticated) {
+  const authError = searchParams.get('error');
+
+  if (!isLoading && isAuthenticated) {
     router.push('/dashboard');
     return null;
   }
 
-  const handleSocialLogin = (provider: 'apple' | 'google') => {
-    const user: User = {
-      id: `${provider}_${Date.now()}`,
-      name: provider === 'apple' ? 'Apple User' : 'Google User',
-      email: `user@${provider}.com`,
-      authProvider: provider,
-    };
-    login(user);
-    router.push('/dashboard');
+  const handleGoogleLogin = async () => {
+    setError('');
+    await loginWithGoogle();
   };
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
+
     if (!email || !password) {
       setError('Please fill in all fields.');
       return;
@@ -46,42 +47,83 @@ export default function LoginPage() {
       setError('Please enter your name.');
       return;
     }
-    const user: User = {
-      id: `email_${Date.now()}`,
-      name: name || email.split('@')[0],
-      email,
-      authProvider: 'email',
-    };
-    login(user);
-    router.push('/dashboard');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      if (isSignUp) {
+        const result = await signUpWithEmail(email, password, name);
+        if (result.error) {
+          setError(result.error);
+        } else {
+          setSuccessMessage('Account created! Check your email to confirm, then sign in.');
+          setIsSignUp(false);
+        }
+      } else {
+        const result = await loginWithEmail(email, password);
+        if (result.error) {
+          setError(result.error);
+        } else {
+          router.push('/dashboard');
+        }
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (!phone || phone.length < 8) {
       setError('Please enter a valid phone number.');
       return;
     }
     setError('');
-    setOtpSent(true);
+    setSubmitting(true);
+    try {
+      const result = await loginWithOTP(phone);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setOtpSent(true);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleVerifyOTP = (e: React.FormEvent) => {
+  const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!otp || otp.length < 4) {
+    if (!otp || otp.length < 6) {
       setError('Please enter the 6-digit OTP code.');
       return;
     }
-    const user: User = {
-      id: `phone_${Date.now()}`,
-      name: name || `User ${phone.slice(-4)}`,
-      email: '',
-      phone,
-      authProvider: 'phone',
-    };
-    login(user);
-    router.push('/dashboard');
+    setSubmitting(true);
+    try {
+      const result = await verifyOTP(phone, otp);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        router.push('/dashboard');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mx-auto"></div>
+          <p className="mt-4 text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
@@ -92,22 +134,23 @@ export default function LoginPage() {
             <p className="text-gray-500 mt-2">Sign in to save your progress, reports, and checklists</p>
           </div>
 
+          {authError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-700 text-sm">Authentication failed. Please try again.</p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-green-700 text-sm font-medium">{successMessage}</p>
+            </div>
+          )}
+
           {authMethod === 'select' && (
             <div className="space-y-4">
-              {/* Apple Sign In */}
-              <button
-                onClick={() => handleSocialLogin('apple')}
-                className="w-full flex items-center justify-center gap-3 bg-black text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-gray-800 transition-colors"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                </svg>
-                Continue with Apple
-              </button>
-
               {/* Google Sign In */}
               <button
-                onClick={() => handleSocialLogin('google')}
+                onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center gap-3 bg-white text-gray-700 border-2 border-gray-200 rounded-xl px-6 py-3.5 font-semibold hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -157,7 +200,7 @@ export default function LoginPage() {
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <button
                 type="button"
-                onClick={() => { setAuthMethod('select'); setError(''); }}
+                onClick={() => { setAuthMethod('select'); setError(''); setSuccessMessage(''); }}
                 className="text-blue-600 text-sm font-medium hover:underline mb-2"
               >
                 &larr; Back to all options
@@ -197,7 +240,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="Minimum 6 characters"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -208,16 +251,17 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full bg-blue-700 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-blue-800 transition-colors"
+                disabled={submitting}
+                className="w-full bg-blue-700 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSignUp ? 'Create Account' : 'Sign In'}
+                {submitting ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
               </button>
 
               <p className="text-center text-sm text-gray-500">
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
                 <button
                   type="button"
-                  onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
+                  onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccessMessage(''); }}
                   className="text-blue-600 font-medium hover:underline"
                 >
                   {isSignUp ? 'Sign In' : 'Sign Up'}
@@ -242,16 +286,6 @@ export default function LoginPage() {
 
               {!otpSent ? (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter your name"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    />
-                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                     <div className="flex gap-2">
@@ -281,16 +315,17 @@ export default function LoginPage() {
 
                   <button
                     onClick={handleSendOTP}
-                    className="w-full bg-green-600 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-green-700 transition-colors"
+                    disabled={submitting}
+                    className="w-full bg-green-600 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    Send OTP Code
+                    {submitting ? 'Sending...' : 'Send OTP Code'}
                   </button>
                 </>
               ) : (
                 <form onSubmit={handleVerifyOTP} className="space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-green-800 text-sm font-medium">
-                      OTP code sent to {phone}. For demo, enter any 6-digit code.
+                      OTP code sent to {phone}. Enter the 6-digit code below.
                     </p>
                   </div>
 
@@ -312,9 +347,10 @@ export default function LoginPage() {
 
                   <button
                     type="submit"
-                    className="w-full bg-green-600 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-green-700 transition-colors"
+                    disabled={submitting}
+                    className="w-full bg-green-600 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    Verify & Sign In
+                    {submitting ? 'Verifying...' : 'Verify & Sign In'}
                   </button>
 
                   <button
@@ -330,11 +366,33 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          By signing in, you agree that this tool provides general information only and does not
-          constitute migration advice. Your data is stored locally on your device.
-        </p>
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-blue-900">Your data is secure</p>
+              <p className="text-xs text-blue-700 mt-1">
+                Your data is stored securely in the cloud. Reports sync across devices.
+                By signing in, you agree that this tool provides general information only.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
