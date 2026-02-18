@@ -1,20 +1,37 @@
-import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+'use client';
 
-export default async function AuthCallbackPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ code?: string; next?: string }>;
-}) {
-  const { code, next } = await searchParams;
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
-  if (code) {
-    const supabase = await createServerSupabaseClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      redirect(next || '/dashboard');
-    }
-  }
+export default function AuthCallbackPage() {
+  const router = useRouter();
 
-  redirect('/login?error=auth_callback_failed');
+  useEffect(() => {
+    const supabase = createClient();
+
+    const handleCallback = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const next = params.get('next') || '/dashboard';
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          router.replace(next);
+          return;
+        }
+      }
+
+      router.replace('/login?error=auth_callback_failed');
+    };
+
+    handleCallback();
+  }, [router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p>Signing you in...</p>
+    </div>
+  );
 }
