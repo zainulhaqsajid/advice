@@ -676,12 +676,12 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-bold text-xs font-mono">
-                        {row.case_number.slice(-4)}
+                        {(row.case_number || '—').slice(-4)}
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">
-                          {row.case_number}
-                          <span className="text-gray-400 font-normal ml-2 text-sm">{row.visa_name}</span>
+                          {row.case_number || '—'}
+                          <span className="text-gray-400 font-normal ml-2 text-sm">{row.visa_name || '—'}</span>
                         </div>
                         <div className="text-sm text-gray-500 flex items-center gap-2">
                           <span>SC {row.visa_subclass}</span>
@@ -711,7 +711,7 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                       <div>
                         <span className="text-gray-500 block text-xs">User ID</span>
-                        <span className="font-mono text-xs">{row.user_id.slice(0, 12)}...</span>
+                        <span className="font-mono text-xs">{row.user_id ? row.user_id.slice(0, 12) + '...' : '—'}</span>
                       </div>
                       <div>
                         <span className="text-gray-500 block text-xs">Last Updated</span>
@@ -805,7 +805,7 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <span className="text-gray-500 block text-xs">User ID</span>
-                        <span className="font-mono text-xs">{row.user_id.slice(0, 12)}...</span>
+                        <span className="font-mono text-xs">{row.user_id ? row.user_id.slice(0, 12) + '...' : '—'}</span>
                       </div>
                       <div>
                         <span className="text-gray-500 block text-xs">Case ID</span>
