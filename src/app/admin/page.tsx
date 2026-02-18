@@ -151,6 +151,11 @@ export default function AdminDashboard() {
     setWarning(null);
     try {
       const res = await fetch(`/api/admin?tab=${tab}`);
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setError(`Server returned non-JSON response (${res.status}). Check server logs.`);
+        return;
+      }
       const json = await res.json();
       if (!res.ok) {
         if (res.status === 401) {
@@ -176,6 +181,8 @@ export default function AdminDashboard() {
         try {
           const res = await fetch(`/api/admin?tab=${tab}`);
           if (!res.ok) return 0;
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) return 0;
           const json = await res.json();
           return (json.data || []).length;
         } catch {

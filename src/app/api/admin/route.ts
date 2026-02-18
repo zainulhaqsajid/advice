@@ -29,76 +29,148 @@ async function verifyAgentRole(): Promise<{ authorized: boolean; userId?: string
 
 // GET /api/admin?tab=assessments|bookings|contacts|cases|messages
 export async function GET(request: NextRequest) {
-  const { authorized } = await verifyAgentRole();
-  if (!authorized) {
-    return NextResponse.json({ error: 'Unauthorized. Agent or admin role required.' }, { status: 401 });
-  }
-
-  const admin = await createAdminClient();
-  const tab = request.nextUrl.searchParams.get('tab') || 'assessments';
-
-  const tableMap: Record<string, string> = {
-    assessments: 'assessments',
-    bookings: 'bookings',
-    contacts: 'contact_inquiries',
-    cases: 'client_cases',
-    messages: 'messages',
-  };
-
-  const tableName = tableMap[tab];
-  if (!tableName) {
-    return NextResponse.json({ error: 'Invalid tab' }, { status: 400 });
-  }
-
-  const { data, error } = await admin
-    .from(tableName)
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(200);
-
-  if (error) {
-    console.error(`[API /admin GET] tab=${tab} error:`, error);
-    // If table doesn't exist yet, return empty array instead of error
-    if (error.message?.includes('does not exist') || error.code === '42P01') {
-      return NextResponse.json({ data: [], warning: `Table "${tableName}" does not exist yet. Run the SQL migration.` });
+  try {
+    const { authorized } = await verifyAgentRole();
+    if (!authorized) {
+      return NextResponse.json({ error: 'Unauthorized. Agent or admin role required.' }, { status: 401 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
 
-  return NextResponse.json({ data: data || [] });
+    const admin = await createAdminClient();
+    const tab = request.nextUrl.searchParams.get('tab') || 'assessments';
+
+    const tableMap: Record<string, string> = {
+      assessments: 'assessments',
+      bookings: 'bookings',
+      contacts: 'contact_inquiries',
+      cases: 'client_cases',
+      messages: 'messages',
+    };
+
+    const tableName = tableMap[tab];
+    if (!tableName) {
+      return NextResponse.json({ error: 'Invalid tab' }, { status: 400 });
+    }
+
+    const { data, error } = await admin
+      .from(tableName)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) {
+      console.error(`[API /admin GET] tab=${tab} error:`, error);
+      // If table doesn't exist yet, return empty array instead of error
+      if (error.message?.includes('does not exist') || error.code === '42P01') {
+        return NextResponse.json({ data: [], warning: `Table "${tableName}" does not exist yet. Run the SQL migration.` });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: data || [] });
+  } catch (err) {
+    console.error('[API /admin GET] Unexpected error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 // POST /api/admin - Agent actions (e.g., reply to message)
 export async function POST(request: Request) {
-  const { authorized, userId } = await verifyAgentRole();
-  if (!authorized || !userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const { authorized, userId } = await verifyAgentRole();
+    if (!authorized || !userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const admin = await createAdminClient();
+    const body = await request.json();
+    const { action } = body as { action: string };
+
+    if (action === 'reply_message') {
+      const { user_id, case_id, subject, content } = body as {
+        user_id: string; case_id?: string; subject?: string; content: string;
+      };
+
+      if (!user_id || !content?.trim()) {
+        return NextResponse.json({ error: 'user_id and content are required' }, { status: 400 });
+      }
+
+      const { data, error } = await admin
+        .from('messages')
+        .insert({
+          user_id,
+          case_id: case_id || null,
+          sender_type: 'agent',
+          subject: subject || null,
+          content: content.trim(),
+          attachments: [],
+          is_read: false,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ message: data }, { status: 201 });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (err) {
+    console.error('[API /admin POST] Unexpected error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
 
-  const admin = await createAdminClient();
-  const body = await request.json();
-  const { action } = body as { action: string };
+// PATCH /api/admin - Update status of any record
+export async function PATCH(request: Request) {
+  try {
+    const { authorized } = await verifyAgentRole();
+    if (!authorized) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  if (action === 'reply_message') {
-    const { user_id, case_id, subject, content } = body as {
-      user_id: string; case_id?: string; subject?: string; content: string;
+    const admin = await createAdminClient();
+    const body = await request.json();
+    const { table, id, updates } = body as {
+      table: string;
+      id: string;
+      updates: Record<string, unknown>;
     };
 
-    if (!user_id || !content?.trim()) {
-      return NextResponse.json({ error: 'user_id and content are required' }, { status: 400 });
+    if (!table || !id || !updates) {
+      return NextResponse.json({ error: 'table, id, and updates are required' }, { status: 400 });
+    }
+
+    const allowedTables = ['assessments', 'bookings', 'contact_inquiries', 'client_cases', 'client_documents', 'messages'];
+    if (!allowedTables.includes(table)) {
+      return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
+    }
+
+    const allowedFields: Record<string, string[]> = {
+      assessments: ['status'],
+      bookings: ['status', 'payment_status', 'notes'],
+      contact_inquiries: ['status'],
+      client_cases: ['status', 'priority', 'assigned_agent', 'agent_email', 'notes'],
+      client_documents: ['status', 'review_notes'],
+      messages: ['is_read'],
+    };
+
+    const filtered: Record<string, unknown> = {};
+    for (const key of Object.keys(updates)) {
+      if (allowedFields[table]?.includes(key)) {
+        filtered[key] = updates[key];
+      }
+    }
+
+    if (Object.keys(filtered).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
     const { data, error } = await admin
-      .from('messages')
-      .insert({
-        user_id,
-        case_id: case_id || null,
-        sender_type: 'agent',
-        subject: subject || null,
-        content: content.trim(),
-        attachments: [],
-        is_read: false,
-      })
+      .from(table)
+      .update(filtered)
+      .eq('id', id)
       .select()
       .single();
 
@@ -106,66 +178,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ message: data }, { status: 201 });
+    return NextResponse.json({ data });
+  } catch (err) {
+    console.error('[API /admin PATCH] Unexpected error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-}
-
-// PATCH /api/admin - Update status of any record
-export async function PATCH(request: Request) {
-  const { authorized } = await verifyAgentRole();
-  if (!authorized) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const admin = await createAdminClient();
-  const body = await request.json();
-  const { table, id, updates } = body as {
-    table: string;
-    id: string;
-    updates: Record<string, unknown>;
-  };
-
-  if (!table || !id || !updates) {
-    return NextResponse.json({ error: 'table, id, and updates are required' }, { status: 400 });
-  }
-
-  const allowedTables = ['assessments', 'bookings', 'contact_inquiries', 'client_cases', 'client_documents', 'messages'];
-  if (!allowedTables.includes(table)) {
-    return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
-  }
-
-  const allowedFields: Record<string, string[]> = {
-    assessments: ['status'],
-    bookings: ['status', 'payment_status', 'notes'],
-    contact_inquiries: ['status'],
-    client_cases: ['status', 'priority', 'assigned_agent', 'agent_email', 'notes'],
-    client_documents: ['status', 'review_notes'],
-    messages: ['is_read'],
-  };
-
-  const filtered: Record<string, unknown> = {};
-  for (const key of Object.keys(updates)) {
-    if (allowedFields[table]?.includes(key)) {
-      filtered[key] = updates[key];
-    }
-  }
-
-  if (Object.keys(filtered).length === 0) {
-    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
-  }
-
-  const { data, error } = await admin
-    .from(table)
-    .update(filtered)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ data });
 }
