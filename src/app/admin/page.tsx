@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { fetchAdminTab, updateAdminRecord, replyToMessage } from './actions';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                      */
@@ -150,34 +151,15 @@ export default function AdminDashboard() {
     setError(null);
     setWarning(null);
     try {
-      const res = await fetch(`/api/admin?tab=${tab}`);
-      const text = await res.text();
-
-      // Try to parse as JSON
-      let json;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        // Not JSON — extract error message from HTML if possible
-        const titleMatch = text.match(/<title>(.*?)<\/title>/i);
-        const bodyText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
-        const hint = titleMatch ? titleMatch[1] : bodyText;
-        setError(`API error (${res.status}): ${hint}`);
+      const result = await fetchAdminTab(tab);
+      if (result.error) {
+        setError(result.error);
         return;
       }
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          setError('Unauthorized. Agent or admin role required.');
-          return;
-        }
-        setError(json.error || `Server error (${res.status})`);
-        return;
-      }
-      setData(json.data || []);
-      if (json.warning) setWarning(json.warning);
+      setData(result.data || []);
+      if (result.warning) setWarning(result.warning);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error. Is the server running?');
+      setError(err instanceof Error ? err.message : 'Failed to fetch data.');
     } finally {
       setLoading(false);
     }
@@ -188,12 +170,8 @@ export default function AdminDashboard() {
     const results = await Promise.all(
       tabs.map(async (tab) => {
         try {
-          const res = await fetch(`/api/admin?tab=${tab}`);
-          if (!res.ok) return 0;
-          const contentType = res.headers.get('content-type') || '';
-          if (!contentType.includes('application/json')) return 0;
-          const json = await res.json();
-          return (json.data || []).length;
+          const result = await fetchAdminTab(tab);
+          return (result.data || []).length;
         } catch {
           return 0;
         }
@@ -230,13 +208,8 @@ export default function AdminDashboard() {
   const updateStatus = async (table: string, id: string, field: string, value: string | boolean) => {
     setUpdatingId(id);
     try {
-      const res = await fetch('/api/admin', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table, id, updates: { [field]: value } }),
-      });
-      if (!res.ok) throw new Error('Update failed');
-      // Refresh current tab
+      const result = await updateAdminRecord(table, id, { [field]: value });
+      if (result.error) throw new Error(result.error);
       await fetchTab(activeTab);
     } catch {
       alert('Failed to update. Please try again.');
@@ -251,18 +224,8 @@ export default function AdminDashboard() {
     if (!replyContent.trim()) return;
     setSendingReply(true);
     try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reply_message',
-          user_id: userId,
-          case_id: caseId,
-          subject: replySubject || null,
-          content: replyContent,
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to send reply');
+      const result = await replyToMessage(userId, caseId, replySubject || null, replyContent);
+      if (result.error) throw new Error(result.error);
       setReplyingTo(null);
       setReplyContent('');
       setReplySubject('');
