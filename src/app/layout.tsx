@@ -17,6 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className="antialiased bg-gray-50 min-h-screen"
+        suppressHydrationWarning
       >
         <AuthProvider>
         <Navigation />
