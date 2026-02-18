@@ -219,8 +219,10 @@ export default function AdminDashboard() {
       router.push('/admin/login');
       return;
     }
-    fetchTab(activeTab);
-    fetchCounts();
+    fetchTab(activeTab).then(() => {
+      // Delay counts fetch to avoid concurrent request issues during dev compilation
+      fetchCounts();
+    });
   }, [authLoading, isAuthenticated, user, activeTab, fetchTab, fetchCounts, router]);
 
   /* -- Status update ------------------------------------------------------- */

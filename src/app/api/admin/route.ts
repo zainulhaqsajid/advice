@@ -13,7 +13,7 @@ function createRequestSupabaseClient(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll() {
-          // No-op in API routes — we don't need to set cookies here
+          // No-op in API routes
         },
       },
     }
@@ -22,50 +22,80 @@ function createRequestSupabaseClient(request: NextRequest) {
 
 // Admin client — service role key, no cookies needed
 function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+  // Validate service role key isn't the anon key
+  try {
+    const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64').toString());
+    if (payload.role !== 'service_role') {
+      console.error('[API /admin] SUPABASE_SERVICE_ROLE_KEY is not a service_role key! Current role:', payload.role);
     }
-  );
+  } catch {
+    // Ignore decode errors
+  }
+
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 // Verify that the current session user has agent or admin role
-async function verifyAgentRole(request: NextRequest): Promise<{ authorized: boolean; userId?: string; role?: string }> {
+async function verifyAgentRole(request: NextRequest): Promise<{ authorized: boolean; userId?: string; role?: string; error?: string }> {
   try {
     const supabase = createRequestSupabaseClient(request);
     const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return { authorized: false };
+    if (error || !user) return { authorized: false, error: 'Not authenticated' };
 
-    // Look up the user's role from profiles using admin client (bypasses RLS)
-    const admin = getAdminClient();
-    const { data: profile } = await admin
+    // Use the user's own authenticated session to read their profile (works with RLS)
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
+
+    if (profileError) {
+      console.error('[API /admin] Profile query error:', profileError.message);
+      // Fallback: try admin client
+      try {
+        const admin = getAdminClient();
+        const { data: adminProfile } = await admin
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        const role = adminProfile?.role || 'client';
+        if (role === 'agent' || role === 'admin') {
+          return { authorized: true, userId: user.id, role };
+        }
+      } catch {
+        // Admin client also failed
+      }
+      return { authorized: false, error: `Profile lookup failed: ${profileError.message}` };
+    }
 
     const role = profile?.role || 'client';
     if (role === 'agent' || role === 'admin') {
       return { authorized: true, userId: user.id, role };
     }
 
-    return { authorized: false };
-  } catch {
-    return { authorized: false };
+    return { authorized: false, error: `Role "${role}" is not authorized. Need "agent" or "admin".` };
+  } catch (err) {
+    console.error('[API /admin] verifyAgentRole error:', err);
+    return { authorized: false, error: 'Auth verification failed' };
   }
 }
 
 // GET /api/admin?tab=assessments|bookings|contacts|cases|messages
 export async function GET(request: NextRequest) {
   try {
-    const { authorized } = await verifyAgentRole(request);
+    const { authorized, error: authError } = await verifyAgentRole(request);
     if (!authorized) {
-      return NextResponse.json({ error: 'Unauthorized. Agent or admin role required.' }, { status: 401 });
+      return NextResponse.json(
+        { error: authError || 'Unauthorized. Agent or admin role required.' },
+        { status: 401 }
+      );
     }
 
     const admin = getAdminClient();
@@ -92,9 +122,15 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error(`[API /admin GET] tab=${tab} error:`, error);
-      // If table doesn't exist yet, return empty array instead of error
       if (error.message?.includes('does not exist') || error.code === '42P01') {
         return NextResponse.json({ data: [], warning: `Table "${tableName}" does not exist yet. Run the SQL migration.` });
+      }
+      // Check if it's a permission error (wrong service role key)
+      if (error.message?.includes('permission denied') || error.code === '42501') {
+        return NextResponse.json({
+          data: [],
+          warning: `Permission denied for "${tableName}". Check that SUPABASE_SERVICE_ROLE_KEY in .env.local is the correct service_role key (not the anon key).`,
+        });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -102,7 +138,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: data || [] });
   } catch (err) {
     console.error('[API /admin GET] Unexpected error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
