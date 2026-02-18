@@ -1,15 +1,48 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+
+// Create a Supabase client using cookies from the request (avoids next/headers cookies())
+function createRequestSupabaseClient(request: NextRequest) {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll() {
+          // No-op in API routes — we don't need to set cookies here
+        },
+      },
+    }
+  );
+}
+
+// Admin client — service role key, no cookies needed
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
 
 // Verify that the current session user has agent or admin role
-async function verifyAgentRole(): Promise<{ authorized: boolean; userId?: string; role?: string }> {
+async function verifyAgentRole(request: NextRequest): Promise<{ authorized: boolean; userId?: string; role?: string }> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createRequestSupabaseClient(request);
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) return { authorized: false };
 
     // Look up the user's role from profiles using admin client (bypasses RLS)
-    const admin = await createAdminClient();
+    const admin = getAdminClient();
     const { data: profile } = await admin
       .from('profiles')
       .select('role')
@@ -30,12 +63,12 @@ async function verifyAgentRole(): Promise<{ authorized: boolean; userId?: string
 // GET /api/admin?tab=assessments|bookings|contacts|cases|messages
 export async function GET(request: NextRequest) {
   try {
-    const { authorized } = await verifyAgentRole();
+    const { authorized } = await verifyAgentRole(request);
     if (!authorized) {
       return NextResponse.json({ error: 'Unauthorized. Agent or admin role required.' }, { status: 401 });
     }
 
-    const admin = await createAdminClient();
+    const admin = getAdminClient();
     const tab = request.nextUrl.searchParams.get('tab') || 'assessments';
 
     const tableMap: Record<string, string> = {
@@ -74,14 +107,14 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/admin - Agent actions (e.g., reply to message)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { authorized, userId } = await verifyAgentRole();
+    const { authorized, userId } = await verifyAgentRole(request);
     if (!authorized || !userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const admin = await createAdminClient();
+    const admin = getAdminClient();
     const body = await request.json();
     const { action } = body as { action: string };
 
@@ -123,14 +156,14 @@ export async function POST(request: Request) {
 }
 
 // PATCH /api/admin - Update status of any record
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
-    const { authorized } = await verifyAgentRole();
+    const { authorized } = await verifyAgentRole(request);
     if (!authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const admin = await createAdminClient();
+    const admin = getAdminClient();
     const body = await request.json();
     const { table, id, updates } = body as {
       table: string;

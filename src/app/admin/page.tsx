@@ -151,12 +151,21 @@ export default function AdminDashboard() {
     setWarning(null);
     try {
       const res = await fetch(`/api/admin?tab=${tab}`);
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        setError(`Server returned non-JSON response (${res.status}). Check server logs.`);
+      const text = await res.text();
+
+      // Try to parse as JSON
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        // Not JSON — extract error message from HTML if possible
+        const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+        const bodyText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+        const hint = titleMatch ? titleMatch[1] : bodyText;
+        setError(`API error (${res.status}): ${hint}`);
         return;
       }
-      const json = await res.json();
+
       if (!res.ok) {
         if (res.status === 401) {
           setError('Unauthorized. Agent or admin role required.');
