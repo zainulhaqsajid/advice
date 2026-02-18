@@ -495,17 +495,17 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
-                        {row.full_name[0].toUpperCase()}
+                        {(row.full_name || '?')[0].toUpperCase()}
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">
-                          {row.full_name}
-                          <span className="text-gray-400 font-normal ml-2 text-sm">{row.email}</span>
+                          {row.full_name || '—'}
+                          <span className="text-gray-400 font-normal ml-2 text-sm">{row.email || '—'}</span>
                         </div>
                         <div className="text-sm text-gray-500 flex items-center gap-2">
-                          <span className="capitalize">{row.consultation_type.replace('_', ' ')}</span>
+                          <span className="capitalize">{(row.consultation_type || '').replace('_', ' ') || '—'}</span>
                           <span className="text-gray-300">|</span>
-                          <span>{row.preferred_date} at {row.preferred_time}</span>
+                          <span>{row.preferred_date || '—'} at {row.preferred_time || '—'}</span>
                           {row.payment_amount && (
                             <>
                               <span className="text-gray-300">|</span>
@@ -597,15 +597,15 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 font-bold text-sm">
-                        {row.full_name[0].toUpperCase()}
+                        {(row.full_name || '?')[0].toUpperCase()}
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">
-                          {row.full_name}
-                          <span className="text-gray-400 font-normal ml-2 text-sm">{row.email}</span>
+                          {row.full_name || '—'}
+                          <span className="text-gray-400 font-normal ml-2 text-sm">{row.email || '—'}</span>
                         </div>
                         <div className="text-sm text-gray-500">
-                          <span className="capitalize">{row.inquiry_type.replace(/_/g, ' ')}</span>
+                          <span className="capitalize">{(row.inquiry_type || '').replace(/_/g, ' ') || '—'}</span>
                           {row.visa_category && (
                             <>
                               <span className="text-gray-300 mx-2">|</span>
