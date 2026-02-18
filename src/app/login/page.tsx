@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
-type AuthMethod = 'select' | 'email' | 'phone';
+type AuthMethod = 'select' | 'email' | 'otp';
 
 function LoginForm() {
   const router = useRouter();
@@ -14,7 +14,7 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -76,14 +76,14 @@ function LoginForm() {
   };
 
   const handleSendOTP = async () => {
-    if (!phone || phone.length < 8) {
-      setError('Please enter a valid phone number.');
+    if (!otpEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail)) {
+      setError('Please enter a valid email address.');
       return;
     }
     setError('');
     setSubmitting(true);
     try {
-      const result = await loginWithOTP(phone);
+      const result = await loginWithOTP(otpEmail);
       if (result.error) {
         setError(result.error);
       } else {
@@ -103,7 +103,7 @@ function LoginForm() {
     }
     setSubmitting(true);
     try {
-      const result = await verifyOTP(phone, otp);
+      const result = await verifyOTP(otpEmail, otp);
       if (result.error) {
         setError(result.error);
       } else {
@@ -182,15 +182,15 @@ function LoginForm() {
                 Continue with Email
               </button>
 
-              {/* Phone Sign In */}
+              {/* Email OTP (Passwordless) Sign In */}
               <button
-                onClick={() => setAuthMethod('phone')}
+                onClick={() => setAuthMethod('otp')}
                 className="w-full flex items-center justify-center gap-3 bg-green-600 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-green-700 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Continue with Phone (OTP)
+                Passwordless Sign In (Email OTP)
               </button>
             </div>
           )}
@@ -270,8 +270,8 @@ function LoginForm() {
             </form>
           )}
 
-          {/* Phone OTP Form */}
-          {authMethod === 'phone' && (
+          {/* Email OTP Form */}
+          {authMethod === 'otp' && (
             <div className="space-y-4">
               <button
                 type="button"
@@ -281,32 +281,20 @@ function LoginForm() {
                 &larr; Back to all options
               </button>
 
-              <h2 className="text-xl font-bold text-gray-900">Sign In with Phone</h2>
-              <p className="text-sm text-gray-500">We will send you a one-time verification code via SMS.</p>
+              <h2 className="text-xl font-bold text-gray-900">Passwordless Sign In</h2>
+              <p className="text-sm text-gray-500">We will send a one-time verification code to your email. No password needed.</p>
 
               {!otpSent ? (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                    <div className="flex gap-2">
-                      <select className="border border-gray-300 rounded-lg px-3 py-3 text-gray-900 bg-white focus:ring-2 focus:ring-green-500">
-                        <option>+61</option>
-                        <option>+1</option>
-                        <option>+44</option>
-                        <option>+91</option>
-                        <option>+92</option>
-                        <option>+86</option>
-                        <option>+63</option>
-                        <option>+64</option>
-                      </select>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="4XX XXX XXX"
-                        className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      value={otpEmail}
+                      onChange={(e) => setOtpEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
                   </div>
 
                   {error && (
@@ -318,19 +306,19 @@ function LoginForm() {
                     disabled={submitting}
                     className="w-full bg-green-600 text-white rounded-xl px-6 py-3.5 font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    {submitting ? 'Sending...' : 'Send OTP Code'}
+                    {submitting ? 'Sending...' : 'Send Verification Code'}
                   </button>
                 </>
               ) : (
                 <form onSubmit={handleVerifyOTP} className="space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-green-800 text-sm font-medium">
-                      OTP code sent to {phone}. Enter the 6-digit code below.
+                      Verification code sent to {otpEmail}. Check your inbox and enter the 6-digit code below.
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Enter OTP Code</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Enter Verification Code</label>
                     <input
                       type="text"
                       value={otp}
@@ -358,7 +346,7 @@ function LoginForm() {
                     onClick={() => { setOtpSent(false); setOtp(''); }}
                     className="w-full text-gray-500 text-sm hover:underline"
                   >
-                    Resend OTP Code
+                    Resend Code
                   </button>
                 </form>
               )}

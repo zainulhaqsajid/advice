@@ -34,8 +34,8 @@ interface AuthContextType {
   loginWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<{ error: string | null }>;
   loginWithGoogle: () => Promise<void>;
-  loginWithOTP: (phone: string) => Promise<{ error: string | null }>;
-  verifyOTP: (phone: string, token: string) => Promise<{ error: string | null }>;
+  loginWithOTP: (email: string) => Promise<{ error: string | null }>;
+  verifyOTP: (email: string, token: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
   savedReports: SavedReportLocal[];
   saveReport: (report: Omit<SavedReportLocal, 'id' | 'date'>) => Promise<void>;
@@ -164,19 +164,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
   };
 
-  const loginWithOTP = async (phone: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ phone });
+  const loginWithOTP = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({ email });
     if (error) return { error: error.message };
     return { error: null };
   };
 
-  const verifyOTP = async (phone: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
+  const verifyOTP = async (email: string, token: string) => {
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (error) return { error: error.message };
     return { error: null };
   };
