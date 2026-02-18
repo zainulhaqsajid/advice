@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 // POST /api/bookings - Create a consultation booking
 // Uses admin client (service role) so anonymous users can insert without RLS issues
 export async function POST(request: Request) {

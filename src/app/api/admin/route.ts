@@ -2,6 +2,9 @@ import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
+// Force dynamic — this route reads cookies and request data
+export const dynamic = 'force-dynamic';
+
 // Create a Supabase client using cookies from the request (avoids next/headers cookies())
 function createRequestSupabaseClient(request: NextRequest) {
   return createServerClient(
