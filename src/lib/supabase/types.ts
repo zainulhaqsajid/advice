@@ -23,6 +23,7 @@ export interface Database {
           nationality: string | null;
           current_visa: string | null;
           target_visa: string | null;
+          role: 'client' | 'agent' | 'admin';
           created_at: string;
           updated_at: string;
         };
@@ -36,6 +37,7 @@ export interface Database {
           nationality?: string | null;
           current_visa?: string | null;
           target_visa?: string | null;
+          role?: 'client' | 'agent' | 'admin';
           created_at?: string;
           updated_at?: string;
         };
@@ -49,6 +51,7 @@ export interface Database {
           nationality?: string | null;
           current_visa?: string | null;
           target_visa?: string | null;
+          role?: 'client' | 'agent' | 'admin';
           updated_at?: string;
         };
       };

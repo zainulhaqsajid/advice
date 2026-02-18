@@ -124,7 +124,7 @@ const STATUS_COLORS: Record<string, string> = {
 /* -------------------------------------------------------------------------- */
 
 export default function AdminDashboard() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, logout } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<TabId>('assessments');
@@ -133,6 +133,10 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [replySubject, setReplySubject] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
   const [counts, setCounts] = useState<Record<TabId, number>>({
     assessments: 0, bookings: 0, contacts: 0, cases: 0, messages: 0,
   });
@@ -184,15 +188,19 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login');
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.push('/admin/login');
       return;
     }
-    if (isAuthenticated) {
-      fetchTab(activeTab);
-      fetchCounts();
+    // Check role — only agent/admin can access
+    if (user && user.role !== 'agent' && user.role !== 'admin') {
+      router.push('/admin/login');
+      return;
     }
-  }, [authLoading, isAuthenticated, activeTab, fetchTab, fetchCounts, router]);
+    fetchTab(activeTab);
+    fetchCounts();
+  }, [authLoading, isAuthenticated, user, activeTab, fetchTab, fetchCounts, router]);
 
   /* -- Status update ------------------------------------------------------- */
 
@@ -212,6 +220,42 @@ export default function AdminDashboard() {
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  /* -- Reply to message ---------------------------------------------------- */
+
+  const handleReplyMessage = async (userId: string, caseId: string | null) => {
+    if (!replyContent.trim()) return;
+    setSendingReply(true);
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reply_message',
+          user_id: userId,
+          case_id: caseId,
+          subject: replySubject || null,
+          content: replyContent,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to send reply');
+      setReplyingTo(null);
+      setReplyContent('');
+      setReplySubject('');
+      await fetchTab('messages');
+    } catch {
+      alert('Failed to send reply. Please try again.');
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  /* -- Logout ------------------------------------------------------------- */
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/admin/login');
   };
 
   /* -- Helpers ------------------------------------------------------------- */
@@ -269,12 +313,26 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-            <Link
-              href="/"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
-            >
-              Back to Site
-            </Link>
+            <div className="flex items-center gap-3">
+              {user && (
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-xs text-gray-400">{user.role === 'admin' ? 'Admin' : 'MARA Agent'}</p>
+                </div>
+              )}
+              <Link
+                href="/"
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+              >
+                Site
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-sm font-medium transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -773,7 +831,51 @@ export default function AdminDashboard() {
                       >
                         Mark as {row.is_read ? 'unread' : 'read'}
                       </button>
+                      <button
+                        onClick={() => {
+                          setReplyingTo(replyingTo === row.id ? null : row.id);
+                          setReplySubject(row.subject ? `Re: ${row.subject}` : '');
+                          setReplyContent('');
+                        }}
+                        className="px-3 py-1 text-xs font-medium rounded-full border transition-colors bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                      >
+                        Reply
+                      </button>
                     </div>
+
+                    {replyingTo === row.id && (
+                      <div className="mt-3 p-3 bg-white rounded-lg border space-y-2">
+                        <input
+                          type="text"
+                          value={replySubject}
+                          onChange={(e) => setReplySubject(e.target.value)}
+                          placeholder="Subject (optional)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+                        />
+                        <textarea
+                          value={replyContent}
+                          onChange={(e) => setReplyContent(e.target.value)}
+                          placeholder="Type your reply..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-gray-900"
+                        />
+                        <div className="flex items-center gap-2 justify-end">
+                          <button
+                            onClick={() => { setReplyingTo(null); setReplyContent(''); }}
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleReplyMessage(row.user_id, row.case_id)}
+                            disabled={sendingReply || !replyContent.trim()}
+                            className="px-4 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                          >
+                            {sendingReply ? 'Sending...' : 'Send Reply'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

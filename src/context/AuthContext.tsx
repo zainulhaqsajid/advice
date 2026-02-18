@@ -12,6 +12,7 @@ export interface User {
   phone?: string;
   authProvider: string;
   avatar?: string;
+  role: 'client' | 'agent' | 'admin';
 }
 
 // Keep SavedReport interface for backward compatibility
@@ -52,6 +53,7 @@ function supabaseUserToUser(supabaseUser: SupabaseUser, profile?: Profile | null
     phone: supabaseUser.phone || profile?.phone || undefined,
     authProvider: supabaseUser.app_metadata?.provider || 'email',
     avatar: profile?.avatar_url || supabaseUser.user_metadata?.avatar_url || undefined,
+    role: profile?.role || 'client',
   };
 }
 
