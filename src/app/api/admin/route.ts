@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse, NextRequest, connection } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
@@ -89,6 +89,7 @@ async function verifyAgentRole(request: NextRequest): Promise<{ authorized: bool
 
 // GET /api/admin?tab=assessments|bookings|contacts|cases|messages
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const { authorized, error: authError } = await verifyAgentRole(request);
     if (!authorized) {
@@ -147,6 +148,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin - Agent actions (e.g., reply to message)
 export async function POST(request: NextRequest) {
+  await connection();
   try {
     const { authorized, userId } = await verifyAgentRole(request);
     if (!authorized || !userId) {
@@ -196,6 +198,7 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/admin - Update status of any record
 export async function PATCH(request: NextRequest) {
+  await connection();
   try {
     const { authorized } = await verifyAgentRole(request);
     if (!authorized) {
