@@ -143,22 +143,27 @@ export default function AdminDashboard() {
 
   /* -- Fetch data ---------------------------------------------------------- */
 
+  const [warning, setWarning] = useState<string | null>(null);
+
   const fetchTab = useCallback(async (tab: TabId) => {
     setLoading(true);
     setError(null);
+    setWarning(null);
     try {
       const res = await fetch(`/api/admin?tab=${tab}`);
+      const json = await res.json();
       if (!res.ok) {
         if (res.status === 401) {
-          setError('Unauthorized. Only admin users can access this page.');
+          setError('Unauthorized. Agent or admin role required.');
           return;
         }
-        throw new Error('Failed to fetch');
+        setError(json.error || `Server error (${res.status})`);
+        return;
       }
-      const json = await res.json();
       setData(json.data || []);
-    } catch {
-      setError('Failed to load data. Please try again.');
+      if (json.warning) setWarning(json.warning);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error. Is the server running?');
     } finally {
       setLoading(false);
     }
@@ -376,7 +381,13 @@ export default function AdminDashboard() {
 
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
+        {warning && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+            <strong>Warning:</strong> {warning}
           </div>
         )}
 

@@ -37,60 +37,35 @@ export async function GET(request: NextRequest) {
   const admin = await createAdminClient();
   const tab = request.nextUrl.searchParams.get('tab') || 'assessments';
 
-  try {
-    switch (tab) {
-      case 'assessments': {
-        const { data, error } = await admin
-          .from('assessments')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-        return NextResponse.json({ data });
-      }
-      case 'bookings': {
-        const { data, error } = await admin
-          .from('bookings')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-        return NextResponse.json({ data });
-      }
-      case 'contacts': {
-        const { data, error } = await admin
-          .from('contact_inquiries')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-        return NextResponse.json({ data });
-      }
-      case 'cases': {
-        const { data, error } = await admin
-          .from('client_cases')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-        return NextResponse.json({ data });
-      }
-      case 'messages': {
-        const { data, error } = await admin
-          .from('messages')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-        return NextResponse.json({ data });
-      }
-      default:
-        return NextResponse.json({ error: 'Invalid tab' }, { status: 400 });
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Server error';
-    return NextResponse.json({ error: message }, { status: 500 });
+  const tableMap: Record<string, string> = {
+    assessments: 'assessments',
+    bookings: 'bookings',
+    contacts: 'contact_inquiries',
+    cases: 'client_cases',
+    messages: 'messages',
+  };
+
+  const tableName = tableMap[tab];
+  if (!tableName) {
+    return NextResponse.json({ error: 'Invalid tab' }, { status: 400 });
   }
+
+  const { data, error } = await admin
+    .from(tableName)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error(`[API /admin GET] tab=${tab} error:`, error);
+    // If table doesn't exist yet, return empty array instead of error
+    if (error.message?.includes('does not exist') || error.code === '42P01') {
+      return NextResponse.json({ data: [], warning: `Table "${tableName}" does not exist yet. Run the SQL migration.` });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ data: data || [] });
 }
 
 // POST /api/admin - Agent actions (e.g., reply to message)
