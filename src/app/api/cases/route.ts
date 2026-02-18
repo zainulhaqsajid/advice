@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export const dynamic = 'force-dynamic';
-
 // GET /api/cases - Fetch user's cases
 export async function GET() {
   const supabase = await createServerSupabaseClient();
