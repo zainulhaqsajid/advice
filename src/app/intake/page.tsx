@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { submitAssessment } from './actions';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -571,31 +572,26 @@ export default function IntakePage() {
     if (situation === 'visitor') formDataMap.visitorData = visitorData;
 
     const payload = {
-      situation,
+      situation: situation || '',
       email: contactData.email || undefined,
       full_name: contactData.full_name || undefined,
       phone: contactData.phone || undefined,
       form_data: formDataMap,
       recommended_visa: recommendation?.subclasses || undefined,
-      points_score: undefined,
+      points_score: undefined as number | undefined,
     };
 
     try {
-      const res = await fetch('/api/assessments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
+      const result = await submitAssessment(payload);
+      if (result.assessment) {
         setAssessmentSubmitted(true);
       } else {
         // Log but don't block — user still sees results
-        console.warn('Assessment save failed, but proceeding to results');
+        console.warn('Assessment save failed:', result.error);
       }
     } catch {
-      // API save failed — still show results (graceful degradation)
-      console.warn('Assessment API unreachable, proceeding to results');
+      // Server action failed — still show results (graceful degradation)
+      console.warn('Assessment save unreachable, proceeding to results');
     }
 
     // Always proceed to results — the assessment is for the user, DB save is for CRM
