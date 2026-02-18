@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { submitAssessment } from './actions';
+import { submitAssessment, submitBooking } from './actions';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -668,24 +668,19 @@ export default function IntakePage() {
     setBookingError(null);
 
     try {
-      const res = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: bookingForm.fullName,
-          email: bookingForm.email,
-          phone: bookingForm.phone || undefined,
-          consultation_type: bookingForm.consultationType,
-          preferred_date: bookingForm.preferredDate,
-          preferred_time: bookingForm.preferredTime,
-          visa_category: recommendation?.subclasses || bookingForm.visaCategory || undefined,
-          notes: bookingForm.notes || undefined,
-        }),
+      const result = await submitBooking({
+        full_name: bookingForm.fullName,
+        email: bookingForm.email,
+        phone: bookingForm.phone || undefined,
+        consultation_type: bookingForm.consultationType,
+        preferred_date: bookingForm.preferredDate,
+        preferred_time: bookingForm.preferredTime,
+        visa_category: recommendation?.subclasses || bookingForm.visaCategory || undefined,
+        notes: bookingForm.notes || undefined,
       });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to submit booking');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
       setBookingSuccess(true);

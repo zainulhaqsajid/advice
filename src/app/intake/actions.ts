@@ -60,3 +60,72 @@ export async function submitAssessment(payload: {
 
   return { assessment: data };
 }
+
+export async function submitBooking(payload: {
+  full_name: string;
+  email: string;
+  phone?: string;
+  consultation_type: string;
+  preferred_date: string;
+  preferred_time: string;
+  visa_category?: string;
+  notes?: string;
+}): Promise<{ booking?: unknown; error?: string }> {
+  const { full_name, email, phone, consultation_type, preferred_date, preferred_time, visa_category, notes } = payload;
+
+  if (!full_name || !email || !consultation_type || !preferred_date || !preferred_time) {
+    return { error: 'Missing required fields' };
+  }
+
+  const validTypes = ['video', 'phone', 'in_person'];
+  if (!validTypes.includes(consultation_type)) {
+    return { error: 'Invalid consultation type' };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { error: 'Invalid email address' };
+  }
+
+  // Try to get authenticated user (optional)
+  let userId: string | null = null;
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  } catch {
+    // Anonymous user
+  }
+
+  const paymentAmounts: Record<string, number> = {
+    video: 150,
+    phone: 100,
+    in_person: 200,
+  };
+
+  const admin = getAdminClient();
+
+  const { data, error } = await admin
+    .from('bookings')
+    .insert({
+      user_id: userId,
+      full_name,
+      email,
+      phone: phone || null,
+      consultation_type,
+      preferred_date,
+      preferred_time,
+      visa_category: visa_category || null,
+      notes: notes || null,
+      payment_amount: paymentAmounts[consultation_type] || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Booking Action] Supabase error:', error);
+    return { error: error.message };
+  }
+
+  return { booking: data };
+}
