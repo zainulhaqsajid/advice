@@ -31,7 +31,7 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <p>Signing you in...</p>
+      <p className="text-green-400">Signing you in...</p>
     </div>
   );
 }
